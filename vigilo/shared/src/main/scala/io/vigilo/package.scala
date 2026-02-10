@@ -8,24 +8,9 @@ import scala.deriving.Mirror
 
 package object vigilo:
 
-  export io.vigilo.core.{
-    validation,
-    string,
-    number,
-    rel,
-    choice,
-    options,
-    regexp,
-    email,
-    list,
-    required,
-    Relation
-  }
+  export io.vigilo.core.{choice, email, list, number, options, regexp, rel, required, string, validation, Relation}
 
-  export Validator.{
-    validate,
-    validateWithIgnoreFields
-  }
+  export Validator.{validate, validateWithIgnoreFields}
 
   export io.vigilo.core.validators.FieldValidator
 
@@ -48,24 +33,20 @@ package object vigilo:
         .getOrElse(Nil)
 
     extension [T](value: T)(using validator: Validator[T])
-      def validate: ValidatorMessages ?=> Result = validator.validate(value)
-      def validateWithIgnoreFields(fields: String*): ValidatorMessages ?=> Result = validator.validateWithIgnoreFields(value, fields*)
+      def validate: ValidatorMessages ?=> Result                                  = validator.validate(value)
+      def validateWithIgnoreFields(fields: String*): ValidatorMessages ?=> Result =
+        validator.validateWithIgnoreFields(value, fields*)
 
     inline def apply[A](using validator: Validator[A]): Validator[A] = validator
 
     private def validateOthers(value: Any, fields: Seq[FieldInfo]): ValidatorMessages ?=> Map[String, String] =
       val product = value.asInstanceOf[Product]
-      val values =
-        product
-          .productElementNames
-          .zipWithIndex
-          .map {
-            case (name, i) => (name, product.productElement(i))
-          }
-          .toSeq
+      val values  =
+        product.productElementNames.zipWithIndex.map { case (name, i) =>
+          (name, product.productElement(i))
+        }.toSeq
 
-          
-      val vchoices =   
+      val vchoices =
         choicesValidator(fields, values) match
           case Right(()) => Map.empty
           case Left(map) => map
@@ -73,16 +54,15 @@ package object vigilo:
         optionsValidator(fields, values) match
           case Right(()) => Map.empty
           case Left(map) => map
-          
+
       vchoices ++ voptions
 
     inline given derived: [A] => (m: Mirror.Of[A], msg: ValidatorMessages) => Validator[A] =
 
       val fields = extractValidationsFields[A]
-      type Mets = m.MirroredElemTypes
-      type Mels = m.MirroredElemLabels
+      type Mets  = m.MirroredElemTypes
+      type Mels  = m.MirroredElemLabels
       type Label = m.MirroredLabel
-
 
       inline m match
         case p: Mirror.ProductOf[A] =>
@@ -90,22 +70,19 @@ package object vigilo:
             override def validate(value: A): ValidatorMessages ?=> Result =
 
               val othersResults =
-                validateOthers(value, fields).map {
-                  (k, v) => k -> Seq(v)
+                validateOthers(value, fields).map { (k, v) =>
+                  k -> Seq(v)
                 }
-              
-              val results = runValidations[A, Mets, Mels](
-                value.asInstanceOf[Product],
-                fields
-              )
+
+              val results = runValidations[A, Mets, Mels](value.asInstanceOf[Product], fields)
 
               Result(results ++ othersResults)
 
             override def validateWithIgnoreFields(value: A, ignoreFields: String*): ValidatorMessages ?=> Result =
 
               val othersResults =
-                validateOthers(value, fields).map {
-                  (k, v) => k -> Seq(v)
+                validateOthers(value, fields).map { (k, v) =>
+                  k -> Seq(v)
                 }
 
               val results = runValidations[A, Mets, Mels](
@@ -118,11 +95,11 @@ package object vigilo:
         case _ => throw new Exception(s"can't get product of type")
 
     private inline def runValidations[A, Mets, Mels](
-        product: Product,
-        fields: Seq[FieldInfo],
-        i: Int = 0,
-        acc: Map[String, Seq[String]] = Map.empty
-    ): ValidatorMessages ?=> Map[String, Seq[String]] = {
+      product: Product,
+      fields: Seq[FieldInfo],
+      i: Int = 0,
+      acc: Map[String, Seq[String]] = Map.empty
+    ): ValidatorMessages ?=> Map[String, Seq[String]] =
 
       inline (erasedValue[Mets], erasedValue[Mels]) match
         // base case
@@ -132,18 +109,17 @@ package object vigilo:
           val fieldName = constValue[mel & String]
 
           val validations = findAnnotations(fields, fieldName)
-          val newAcc =
+          val newAcc      =
             inline if validations.isEmpty
             then acc
-            else summonFrom {
-              case validator: FieldValidator[met] =>
-                val value = product.productElement(i).asInstanceOf[met]
-                validator.validate(fieldName, validations, value) match
-                  case Right(()) => acc
-                  case Left(results) => acc + (fieldName -> results)
-              case _ => acc
-            }
-
+            else
+              summonFrom {
+                case validator: FieldValidator[met] =>
+                  val value = product.productElement(i).asInstanceOf[met]
+                  validator.validate(fieldName, validations, value) match
+                    case Right(())     => acc
+                    case Left(results) => acc + (fieldName -> results)
+                case _                              => acc
+              }
 
           runValidations[A, metsTail, melsTail](product, fields, i + 1, newAcc)
-    }
