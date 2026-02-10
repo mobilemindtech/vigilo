@@ -1,5 +1,5 @@
 val sharedSettings = Seq(
-  scalaVersion := "3.7.1",
+  scalaVersion := "3.8.1",
   scalacOptions ++= Seq(
     "-new-syntax",
     // "-no-indent",
@@ -14,7 +14,7 @@ val sharedSettings = Seq(
     "-source:future",
     "-Wunused:patvars" // unused pattern variables
   ),
-  javacOptions ++= Seq("-source", "24", "-target", "24")
+  javacOptions ++= Seq("-source", "25", "-target", "25")
 )
 
 lazy val vigilo =
