@@ -24,13 +24,7 @@ lazy val vigilo =
     .withoutSuffixFor(JVMPlatform)
     .in(file("vigilo"))
     .settings(sharedSettings *)
-    .settings(
-      name := "vigilo",
-      organization := "io.vigilo",
-      version := "0.0.1"
-    )
-    .jvmSettings(
-      libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % "test"
-    )
+    .settings(name := "vigilo", organization := "io.vigilo", version := "0.0.1")
+    .jvmSettings(libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % "test")
     // configure Scala-Native settings
     .nativeSettings( /* ... */ ) // defined in sbt-scala-native
